@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP eStore and SLM email notification custom plugin
 Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings 
-Version: 1.0
+Version: 1.1
 Author: Mr. Rob Reyes
 License: GPL2
 */
