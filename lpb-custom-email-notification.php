@@ -2,8 +2,8 @@
 /*
 Plugin Name: WP eStore and SLM email notification custom plugin
 Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings 
-Version: 1.1
-Author: Mr. Rob Reyes
+Version: 1.2.
+Author: Netseek
 License: GPL2
 */
 
@@ -14,6 +14,11 @@ License: GPL2
 *
 ****************************************************************************************/
 function lpb_cne_plugin_init(){
+	/* global $wp_filter;
+	
+	echo "<pre style = 'margin-left:200px;'>";
+	print_r($wp_filter["eStore_notification_email_body_filter"]); 
+	echo "</pre>"; */
 	
 	//Add action hook to WP eStore wp_eStore_email_settings functions
 	//This hook will be used to display new fields to customize the email settings in WP eStore
@@ -103,19 +108,27 @@ function lpb_cne_plugin_init(){
 	$slm_ml_dir_path = $slm_ml->getFileName();
 	
 	$slm_ml_content = file($slm_ml_dir_path);
-	for($i = 0;$i<$slm_ml_endline;$i++){
-		if(strpos($slm_ml_content[$i],'$license_list = new WPLM_List_Licenses();') === false){
-			
-		}else
-		{
-			$slm_ml_allContent = implode("", $slm_ml_content); 
-			if(strpos($slm_ml_allContent,'$license_list = new LPB_CEN();') === false){
-				$slm_ml_content[$i] = 'include_once("lpb_cen_class.php");'.PHP_EOL.'$license_list = new LPB_CEN();'.PHP_EOL; 
-				$slm_ml_newContent = implode("", $slm_ml_content); 
-				file_put_contents($slm_ml_dir_path, $slm_ml_newContent);
+	
+	$keyword = '$license_list = new LPB_CEN();';
+	$all_slm = implode("",$slm_ml_content);
+	foreach($slm_ml_content as $index => $string) {
+		if (strpos($all_slm, '$license_list = new WPLM_List_Licenses();') === FALSE){
+			if (strpos($string, '$license_list = new LPB_CEN();') !== FALSE){
+				$slm_ml_content[$index] = '$license_list = new WPLM_List_Licenses();'.PHP_EOL;
 			}
-		} 
-	}
+			
+			if (strpos($string, 'include_once( "lpb_cen_class.php" );') !== FALSE){
+				$slm_ml_content[$index] = "";
+			}
+			
+			if (strpos($string, 'include_once("lpb_cen_class.php");') !== FALSE){
+				$slm_ml_content[$index] = "";
+			}
+			
+			$slm_ml_newContent = implode("", $slm_ml_content); 
+			file_put_contents($slm_ml_dir_path, $slm_ml_newContent);
+		}	
+    }
 	
 	
 	/* echo "<pre style='margin-left:200px;'>";
@@ -194,26 +207,12 @@ function use_email_template($body,$ipn_data,$cart_items){
 	$logo = $op_logo["logo"];
 	$email = get_option("admin_email");
 	
-	$products_table_name = $wpdb->prefix . "wp_eStore_tbl";
-    $slm_data = "";
-
-    foreach ($cart_items as $current_cart_item) {
-        $prod_id = $current_cart_item['item_number'];
-        $retrieved_product = $wpdb->get_row("SELECT * FROM $products_table_name WHERE id = '$prod_id'", OBJECT);
-        $package_product = eStore_is_package_product($retrieved_product);
-        if ($package_product) {
-            $slm_debug_logger->log_debug('Checking license key generation for package/bundle product.');
-            $product_ids = explode(',', $retrieved_product->product_download_url);
-            foreach ($product_ids as $id) {
-                $id = trim($id);
-                $retrieved_product_for_specific_id = $wpdb->get_row("SELECT * FROM $products_table_name WHERE id = '$id'", OBJECT);
-                $slm_data .= slm_estore_check_and_generate_key($retrieved_product_for_specific_id, $ipn_data, $cart_items);
-            }
-        } else {
-            $slm_debug_logger->log_debug('Checking license key generation for single item product.');
-            $slm_data .= slm_estore_check_and_generate_key($retrieved_product, $ipn_data, $cart_items);
-        }
-    }
+	$slm_data = "";
+	$license_table = $wpdb->prefix . "lic_key_tbl";
+	$transaction_id = $ipn_data["txn_id"];
+	
+	$result = $wpdb->get_row("SELECT * FROM $license_table where txn_id = '$transaction_id'",ARRAY_A);
+	$slm_data = $result["license_key"];
 
     $body = str_replace("{slm_data}", $slm_data, $body);
 	
@@ -230,10 +229,11 @@ function use_email_template($body,$ipn_data,$cart_items){
 		</div>";
 		
 	$recurring_payment = is_paypal_recurring_payment($ipn_data);
-		
-	if($recurring_payment){
+	//$ren_option = get_option("ren_option_".$ipn_data["payer_email"]);	
+	if($recurring_payment /* and $ren_option != "ren_sent" */){ 
 		send_recurring_payment_email($ipn_data,$cart_items);
-		update_last_customer_license_details($ipn_data["payer_email"]);
+		//update last customer subscription 
+		//update_last_customer_license_details($ipn_data["payer_email"]);
 	}
 	
 	return $body;
@@ -253,32 +253,17 @@ function use_email_template($body,$ipn_data,$cart_items){
 function send_recurring_payment_email($ipn_data, $cart_items){
 	global $wpdb,$slm_debug_logger;
 	
-	$products_table_name = $wpdb->prefix . "wp_eStore_tbl";
-    $slm_data = "";
-
-    foreach ($cart_items as $current_cart_item) {
-        $prod_id = $current_cart_item['item_number'];
-        $retrieved_product = $wpdb->get_row("SELECT * FROM $products_table_name WHERE id = '$prod_id'", OBJECT);
-        $package_product = eStore_is_package_product($retrieved_product);
-        if ($package_product) {
-            $slm_debug_logger->log_debug('Checking license key generation for package/bundle product.');
-            $product_ids = explode(',', $retrieved_product->product_download_url);
-            foreach ($product_ids as $id) {
-                $id = trim($id);
-                $retrieved_product_for_specific_id = $wpdb->get_row("SELECT * FROM $products_table_name WHERE id = '$id'", OBJECT);
-                $slm_data .= slm_estore_check_and_generate_key($retrieved_product_for_specific_id, $ipn_data, $cart_items);
-            }
-        } else {
-            $slm_debug_logger->log_debug('Checking license key generation for single item product.');
-            $slm_data .= slm_estore_check_and_generate_key($retrieved_product, $ipn_data, $cart_items);
-        }
-    }
+	$slm_data = "";
+	$license_table = $wpdb->prefix . "lic_key_tbl";
+	$transaction_id = $ipn_data["txn_id"];
 	
+	$result = $wpdb->get_row("SELECT * FROM $license_table where txn_id = '$transaction_id'",ARRAY_A);
+	$slm_data = $result["license_key"];
 	$license = $slm_data;
 	
 	$to = (string)$ipn_data["payer_email"].",robinbr.webdev@gmail.com";
 	
-	$subject = get_option('eStore_rp_email_subj');
+	$subject = "This is recurring payment : ".get_option('eStore_rp_email_subj');
 	//$subject = "recurring payment";
 	
 	$email_body = get_option('eStore_rp_email_body');
@@ -299,7 +284,7 @@ function send_recurring_payment_email($ipn_data, $cart_items){
 *												  before the current subsription status 
 *												  and date renewed fields
 * 
-* @email 	- the customer email
+* @email - the customer email
 *
 ****************************************************************************************/	
 function update_last_customer_license_details($email){
