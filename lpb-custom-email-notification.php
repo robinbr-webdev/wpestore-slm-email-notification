@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: WP eStore and SLM email notification custom plugin
-Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings 
-Version: 1.2.2.0
+Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings.
+Version: 1.2.2.1
 Author: Netseek
 License: GPL2
 */
@@ -67,9 +67,9 @@ function lpb_cne_plugin_init(){
 		}
 		
 		
-		
-		//////////////////////////// SLM //////////////////////////////////////////
+		///////////////////////////////// SLM //////////////////////////////////////////
 
+		
 		//Adds an action hook to wp_lic_mgr_general_settings function
 		//This hook will be used to add additional fields to customize the expiry notification email
 		$slm_settings_rf = new ReflectionFunction('wp_lic_mgr_general_settings');
@@ -94,15 +94,15 @@ function lpb_cne_plugin_init(){
 		
 		//This lines of code adds a new class file inside SLM plugin.
 		//The class extends the WPLM_List_Licenses prepare items method to display only the current subscriptions of each customers.
-		$licenses_class_file = WP_PLUGIN_DIR."/software-license-manager/menu/slm-list-licenses-class.php";
+		/* $licenses_class_file = WP_PLUGIN_DIR."/software-license-manager/menu/slm-list-licenses-class.php";
 		$lpb_cen_file = plugin_dir_path(__FILE__)."lpb_cen_class.php";
 		$lpb_cen_file_nl = WP_PLUGIN_DIR."/software-license-manager/menu/lpb_cen_class.php";
 		
-		//echo $lpb_cen_file_nl;
 		if(!file_exists($lpb_cen_file_nl)){
 			copy($lpb_cen_file,$lpb_cen_file_nl);
 		}
-		
+		 *///commented for use for future purposes
+		 
 		$slm_ml = new ReflectionFunction('wp_lic_mgr_manage_licenses_menu');
 		$slm_ml_endline = $slm_ml->getEndLine();
 		$slm_ml_dir_path = $slm_ml->getFileName();
@@ -167,8 +167,6 @@ if(!function_exists("email_template")){
 		if(empty($headers)){
 			$headers = array('Content-Type: text/html; charset=UTF-8'); 
 		}
-		
-		//echo "<br />email lpb template<br />";
 		 
 		$sent = wp_mail( $to, $subject, $body, $headers,$attachment );	
 		
@@ -421,7 +419,6 @@ function update_expired_license_status(){
 		}
 	}
 }
-//add_action("init","update_expired_license_status");
 add_action("enable_auto_key_expiry","update_expired_license_status");
 
 /**

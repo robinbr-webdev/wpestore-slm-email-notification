@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.2.1] - 2017-07-27
+### Changed
+- Commented the code that copies class to SLM plugin.
+- Cleaned the plugin for unused scripts.
+- Cleaned the plugin for unnecessary comments.
+
 ## [1.2.2.0] - 2017-07-27
 ### Added
 - Added support for {first_name},{last_name} and {slm_data} WP e-store email tags in recurring payment email settings.
