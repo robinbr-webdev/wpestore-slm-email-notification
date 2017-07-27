@@ -2,139 +2,134 @@
 /*
 Plugin Name: WP eStore and SLM email notification custom plugin
 Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings 
-Version: 1.2.
+Version: 1.2.2.0
 Author: Netseek
 License: GPL2
 */
 
-/***************************************************************************************
-*
-* lpb_cne_plugin_init function - initialize plugin and add the required action hooks
-*  								 inside SLM and WP eStore.
-*
-****************************************************************************************/
+/**
+* Initialize plugin and add the required action hooks inside SLM and WP eStore.
+*/
 function lpb_cne_plugin_init(){
-	/* global $wp_filter;
-	
-	echo "<pre style = 'margin-left:200px;'>";
-	print_r($wp_filter["eStore_notification_email_body_filter"]); 
-	echo "</pre>"; */
-	
-	//Add action hook to WP eStore wp_eStore_email_settings functions
-	//This hook will be used to display new fields to customize the email settings in WP eStore
-	$reflFunc = new ReflectionFunction('wp_eStore_email_settings');
-	$endline = $reflFunc->getEndLine();
-	$dir_path = $reflFunc->getFileName();
-	
-	$content = file($dir_path);
-	for($i = 0;$i<$endline;$i++){
-		if(strpos($content[$i],'<div class="submit">') === false){
-			
-		}else
-		{
-			$allContent = implode("", $content); 
-			if(strpos($allContent,'do_action("wp_eStore_email_settings")') === false){
-				$content[$i] = '<?php do_action("wp_eStore_email_settings");?>'.PHP_EOL.$content[$i]; 
-				$newContent = implode("", $content); 
-				file_put_contents($dir_path, $newContent);
-			}
-		} 
+	$plugin_data = get_plugin_data(__FILE__);
+	$old_version = get_option("lpb_enc_version","");
+	if(empty($old_version)){
+		update_option("lpb_enc_version",$plugin_data["Version"]);
+		$old_version = $plugin_data["Version"];
 	}
 	
-	//Add action hook to eStore_send_mail function
-	//This hook will be used to generate email notifications using the custom email template
-	$eStore_send_mail_rf = new ReflectionFunction('eStore_send_mail');
-	$esm_startline = $eStore_send_mail_rf->getStartLine();
-	$esm_endline = $eStore_send_mail_rf->getEndLine();
-	$esm_dir_path = $eStore_send_mail_rf->getFileName();
-	$esm_content = file($esm_dir_path);
-	$esm_allContent = implode("", $esm_content);
-	if(strpos($esm_allContent,'do_action("eStore_send_mail",$to, $body, $subject, $from , $attachment)') === false){
-		$esm_content[$esm_startline+2] = 'do_action("eStore_send_mail",$to, $body, $subject, $from , $attachment);'.PHP_EOL.'if(!function_exists("lpb_cne_plugin_init")){'.PHP_EOL.$esm_content[$esm_startline+2];
-		 
-		for($a=0;$a<$esm_endline;$a++){
-			if(strpos($esm_content[$a],'return $email->send();') === false){
-				//do nothing
-			}else{
-				if(strpos($esm_allContent,'if(!function_exists("lpb_cne_plugin_init")){') === false){
-					$esm_content[$a] = $esm_content[$a].PHP_EOL."}else{return true;}";
+	$new_version = $plugin_data["Version"];
+	if($new_version != $old_version){
+		//Add action hook to WP eStore wp_eStore_email_settings functions
+		//This hook will be used to display new fields to customize the email settings in WP eStore
+		$reflFunc = new ReflectionFunction('wp_eStore_email_settings');
+		$endline = $reflFunc->getEndLine();
+		$dir_path = $reflFunc->getFileName();
+		
+		$content = file($dir_path);
+		for($i = 0;$i<$endline;$i++){
+			if(strpos($content[$i],'<div class="submit">') === false){
+				
+			}else
+			{
+				$allContent = implode("", $content); 
+				if(strpos($allContent,'do_action("wp_eStore_email_settings")') === false){
+					$content[$i] = '<?php do_action("wp_eStore_email_settings");?>'.PHP_EOL.$content[$i]; 
+					$newContent = implode("", $content); 
+					file_put_contents($dir_path, $newContent);
 				}
-			}
+			} 
 		}
 		
-		$esm_newContent = implode("", $esm_content);
-		file_put_contents($esm_dir_path, $esm_newContent);
-	}
-	
-	
-	
-	//////////////////////////// SLM //////////////////////////////////////////
+		//Add action hook to eStore_send_mail function
+		//This hook will be used to generate email notifications using the custom email template
+		$eStore_send_mail_rf = new ReflectionFunction('eStore_send_mail');
+		$esm_startline = $eStore_send_mail_rf->getStartLine();
+		$esm_endline = $eStore_send_mail_rf->getEndLine();
+		$esm_dir_path = $eStore_send_mail_rf->getFileName();
+		$esm_content = file($esm_dir_path);
+		$esm_allContent = implode("", $esm_content);
+		if(strpos($esm_allContent,'do_action("eStore_send_mail",$to, $body, $subject, $from , $attachment)') === false){
+			$esm_content[$esm_startline+2] = 'do_action("eStore_send_mail",$to, $body, $subject, $from , $attachment);'.PHP_EOL.'if(!function_exists("lpb_cne_plugin_init")){'.PHP_EOL.$esm_content[$esm_startline+2];
+			 
+			for($a=0;$a<$esm_endline;$a++){
+				if(strpos($esm_content[$a],'return $email->send();') === false){
+					//do nothing
+				}else{
+					if(strpos($esm_allContent,'if(!function_exists("lpb_cne_plugin_init")){') === false){
+						$esm_content[$a] = $esm_content[$a].PHP_EOL."}else{return true;}";
+					}
+				}
+			}
+			
+			$esm_newContent = implode("", $esm_content);
+			file_put_contents($esm_dir_path, $esm_newContent);
+		}
+		
+		
+		
+		//////////////////////////// SLM //////////////////////////////////////////
 
-	//Adds an action hook to wp_lic_mgr_general_settings function
-	//This hook will be used to add additional fields to customize the expiry notification email
-	$slm_settings_rf = new ReflectionFunction('wp_lic_mgr_general_settings');
-	$slm_settings_endline = $slm_settings_rf->getEndLine();
-	$slm_settings_dir_path = $slm_settings_rf->getFileName();
-	
-	$slm_settings_content = file($slm_settings_dir_path);
-	for($i = 0;$i<$slm_settings_endline;$i++){
-		if(strpos($slm_settings_content[$i],'<div class="submit">') === false){
-			
-		}else
-		{
-			$slm_settings_allContent = implode("", $slm_settings_content); 
-			if(strpos($slm_settings_allContent,'do_action("wp_lic_mgr_general_settings")') === false){
-				$slm_settings_content[$i] = '<?php do_action("wp_lic_mgr_general_settings");?>'.PHP_EOL.$slm_settings_content[$i]; 
-				$slm_settings_newContent = implode("", $slm_settings_content); 
-				file_put_contents($slm_settings_dir_path, $slm_settings_newContent);
-			}
-		} 
-	}
-	
-	
-	//This lines of code adds a new class file inside SLM plugin.
-	//The class extends the WPLM_List_Licenses prepare items method to display only the current subscriptions of each customers.
-	$licenses_class_file = WP_PLUGIN_DIR."/software-license-manager/menu/slm-list-licenses-class.php";
-	$lpb_cen_file = plugin_dir_path(__FILE__)."lpb_cen_class.php";
-	$lpb_cen_file_nl = WP_PLUGIN_DIR."/software-license-manager/menu/lpb_cen_class.php";
-	
-	//echo $lpb_cen_file_nl;
-	if(!file_exists($lpb_cen_file_nl)){
-		copy($lpb_cen_file,$lpb_cen_file_nl);
-	}
-	
-	$slm_ml = new ReflectionFunction('wp_lic_mgr_manage_licenses_menu');
-	$slm_ml_endline = $slm_ml->getEndLine();
-	$slm_ml_dir_path = $slm_ml->getFileName();
-	
-	$slm_ml_content = file($slm_ml_dir_path);
-	
-	$keyword = '$license_list = new LPB_CEN();';
-	$all_slm = implode("",$slm_ml_content);
-	foreach($slm_ml_content as $index => $string) {
-		if (strpos($all_slm, '$license_list = new WPLM_List_Licenses();') === FALSE){
-			if (strpos($string, '$license_list = new LPB_CEN();') !== FALSE){
-				$slm_ml_content[$index] = '$license_list = new WPLM_List_Licenses();'.PHP_EOL;
-			}
-			
-			if (strpos($string, 'include_once( "lpb_cen_class.php" );') !== FALSE){
-				$slm_ml_content[$index] = "";
-			}
-			
-			if (strpos($string, 'include_once("lpb_cen_class.php");') !== FALSE){
-				$slm_ml_content[$index] = "";
-			}
-			
-			$slm_ml_newContent = implode("", $slm_ml_content); 
-			file_put_contents($slm_ml_dir_path, $slm_ml_newContent);
-		}	
-    }
-	
-	
-	/* echo "<pre style='margin-left:200px;'>";
-	print_r($slm_list_content);
-	echo "</pre>";   */
-	
+		//Adds an action hook to wp_lic_mgr_general_settings function
+		//This hook will be used to add additional fields to customize the expiry notification email
+		$slm_settings_rf = new ReflectionFunction('wp_lic_mgr_general_settings');
+		$slm_settings_endline = $slm_settings_rf->getEndLine();
+		$slm_settings_dir_path = $slm_settings_rf->getFileName();
+		
+		$slm_settings_content = file($slm_settings_dir_path);
+		for($i = 0;$i<$slm_settings_endline;$i++){
+			if(strpos($slm_settings_content[$i],'<div class="submit">') === false){
+				
+			}else
+			{
+				$slm_settings_allContent = implode("", $slm_settings_content); 
+				if(strpos($slm_settings_allContent,'do_action("wp_lic_mgr_general_settings")') === false){
+					$slm_settings_content[$i] = '<?php do_action("wp_lic_mgr_general_settings");?>'.PHP_EOL.$slm_settings_content[$i]; 
+					$slm_settings_newContent = implode("", $slm_settings_content); 
+					file_put_contents($slm_settings_dir_path, $slm_settings_newContent);
+				}
+			} 
+		}
+		
+		
+		//This lines of code adds a new class file inside SLM plugin.
+		//The class extends the WPLM_List_Licenses prepare items method to display only the current subscriptions of each customers.
+		$licenses_class_file = WP_PLUGIN_DIR."/software-license-manager/menu/slm-list-licenses-class.php";
+		$lpb_cen_file = plugin_dir_path(__FILE__)."lpb_cen_class.php";
+		$lpb_cen_file_nl = WP_PLUGIN_DIR."/software-license-manager/menu/lpb_cen_class.php";
+		
+		//echo $lpb_cen_file_nl;
+		if(!file_exists($lpb_cen_file_nl)){
+			copy($lpb_cen_file,$lpb_cen_file_nl);
+		}
+		
+		$slm_ml = new ReflectionFunction('wp_lic_mgr_manage_licenses_menu');
+		$slm_ml_endline = $slm_ml->getEndLine();
+		$slm_ml_dir_path = $slm_ml->getFileName();
+		
+		$slm_ml_content = file($slm_ml_dir_path);
+		
+		$keyword = '$license_list = new LPB_CEN();';
+		$all_slm = implode("",$slm_ml_content);
+		foreach($slm_ml_content as $index => $string) {
+			if (strpos($all_slm, '$license_list = new WPLM_List_Licenses();') === FALSE){
+				if (strpos($string, '$license_list = new LPB_CEN();') !== FALSE){
+					$slm_ml_content[$index] = '$license_list = new WPLM_List_Licenses();'.PHP_EOL;
+				}
+				
+				if (strpos($string, 'include_once( "lpb_cen_class.php" );') !== FALSE){
+					$slm_ml_content[$index] = "";
+				}
+				
+				if (strpos($string, 'include_once("lpb_cen_class.php");') !== FALSE){
+					$slm_ml_content[$index] = "";
+				}
+				
+				$slm_ml_newContent = implode("", $slm_ml_content); 
+				file_put_contents($slm_ml_dir_path, $slm_ml_newContent);
+			}	
+		}
+	}//end of version compare
 }
 add_action("admin_init","lpb_cne_plugin_init");
 
@@ -144,18 +139,17 @@ add_action("admin_init","lpb_cne_plugin_init");
 //
 //////////////////////////////////////////////////////////////////////
 
-/***************************************************************************************
+/**
+* Used to display the custom email template in paypal email notifications.
+*							
+* @param string $emails Emails used to send the message.
+* @param string $content Contains the message in the email.
+* @param string $subject Contains the subject of the email.
+* @param string $headers Contains the headers needed in the email.
+* @param string $attachment Contains the attached files for the email.
 *
-* email_template function - used to display the custom email template in paypal email
-*							notifications
-* 
-* @emails 		- email to send the message
-* @content 		-  the message of the email
-* @subject 		- the subject of the email
-* @headers 		- headers of the email
-* @attachement 	- the attachment in the email
-*
-****************************************************************************************/
+* @return boolean
+*/
 if(!function_exists("email_template")){
 	function email_template($emails,$content,$subject,$headers = "",$attachment=""){
 		$op_logo = maybe_unserialize(get_option("optimizepress_header_logo_setup"));
@@ -167,11 +161,6 @@ if(!function_exists("email_template")){
 		<img src = '".$logo."' alt = 'landing page booster logo' style = 'margin-bottom:30px;'/>
 		<div style = 'background:#fff;padding:30px;min-height:500px;font-family:Arial;'>
 			".$content."
-			<br /><br /><br />
-			<strong>Thank you for using Landing Page Booster</strong>
-			<p>".get_site_url()."</p>
-			<p>".$email."</p>
-			<p>0123-456-7890</p>
 		</div>
 		</div>";
 		
@@ -188,18 +177,17 @@ if(!function_exists("email_template")){
 }
 
 
-/******************************************************************************************
-*
-* use_email_template function - add this function to eStore_notification_email_body_filter. 
-*								To add the html tags for the custom email template. Paypal 
-*								recurring email notification also happens here.
+/**
+* Hooked this function to eStore_notification_email_body_filter. 
+* To add the html tags for the custom email template. 								
+* Paypal recurring email notification also happens here.
 * 
-* @body 		- the body of the email message to be sent. License key is added to the 
-*				  body and also the html format for the custom email template
-* @ipn_data 	- the data returned by paypal after transactions
-* @cart_items 	- the cart items
+* @param string $body Contains the body of the email message to be sent. 
+* @param array $ipn_data Contains data returned by paypal after transactions.
+* @param array $cart_items Contains the cart items.
 *
-*******************************************************************************************/
+* @return string $body of the email message
+*/
 add_filter("eStore_notification_email_body_filter","use_email_template",11,3);
 function use_email_template($body,$ipn_data,$cart_items){
 	global $slm_debug_logger, $wpdb;
@@ -215,18 +203,6 @@ function use_email_template($body,$ipn_data,$cart_items){
 	$slm_data = $result["license_key"];
 
     $body = str_replace("{slm_data}", $slm_data, $body);
-	
-	$new_body = "<div style = 'background:#333;padding:30px;'>
-		<img src = '".$logo."' alt = 'landing page booster logo' style = 'margin-bottom:30px;'/>
-		<div style = 'background:#fff;padding:30px;min-height:500px;font-family:Arial;'>
-			".$body."
-			<br /><br /><br />
-			<strong>Thank you for using Landing Page Booster</strong>
-			<p>".get_site_url()."</p>
-			<p>".$email."</p>
-			<p>0123-456-7890</p>
-		</div>
-		</div>";
 		
 	$recurring_payment = is_paypal_recurring_payment($ipn_data);
 	//$ren_option = get_option("ren_option_".$ipn_data["payer_email"]);	
@@ -240,15 +216,15 @@ function use_email_template($body,$ipn_data,$cart_items){
 }
 
 
-/***************************************************************************************
+/**
 *
-* send_recurring_payment_email function - this is the function where recurring email is
-*										  sent to the customer. 
-* 
-* @ipn_data 	- the data returned by paypal after transactions
-* @cart_items 	- the cart items
+* The function where recurring email is sent to the customer. 
+* Sends the recurring email.										  
 *
-****************************************************************************************/
+* @param array $ipn_data Contains data returned by paypal after transactions.
+* @param array $cart_items Contains the cart items.
+*
+*/
 //add_action("eStore_paypal_recurring_payment_received","send_recurring_payment_email",11,2);// commented just in case can be used in WP eStore eStore_paypal_recurring_payment_received hook
 function send_recurring_payment_email($ipn_data, $cart_items){
 	global $wpdb,$slm_debug_logger;
@@ -256,18 +232,18 @@ function send_recurring_payment_email($ipn_data, $cart_items){
 	$slm_data = "";
 	$license_table = $wpdb->prefix . "lic_key_tbl";
 	$transaction_id = $ipn_data["txn_id"];
+	$email_subject = get_option('eStore_rp_email_subj');
+	$email_body = get_option('eStore_rp_email_body');
 	
 	$result = $wpdb->get_row("SELECT * FROM $license_table where txn_id = '$transaction_id'",ARRAY_A);
 	$slm_data = $result["license_key"];
-	$license = $slm_data;
 	
-	$to = (string)$ipn_data["payer_email"].",robinbr.webdev@gmail.com";
+	$tags = array("{first_name}", "{last_name}", "{slm_data}");
+	$values = array($ipn_data['first_name'], $ipn_data['last_name'],$slm_data);
 	
-	$subject = "This is recurring payment : ".get_option('eStore_rp_email_subj');
-	//$subject = "recurring payment";
-	
-	$email_body = get_option('eStore_rp_email_body');
-	$body = $email_body."<br /><strong>New License Key: </strong>".$license;
+	$to = (string)$ipn_data["payer_email"];
+	$subject = str_replace($tags, $values, $email_subject);
+    $body = stripslashes(str_replace($tags, $values, wpautop($email_body)));
 	
 	$download_email = get_option('eStore_download_email_address');
 	$site_title = get_bloginfo( 'name' );
@@ -278,15 +254,13 @@ function send_recurring_payment_email($ipn_data, $cart_items){
 	email_template($to,$body,$subject,$headers);
 }
 
-/***************************************************************************************
+/**
+* Update customer latest subscription before the current subsription status and date renewed fields.
+*												  
+* @param string $email The customer email.
 *
-* update_last_customer_license_details function - update customer latest subscription 
-*												  before the current subsription status 
-*												  and date renewed fields
-* 
-* @email - the customer email
-*
-****************************************************************************************/	
+* @return boolean
+*/	
 function update_last_customer_license_details($email){
 	global $wpdb;
 	
@@ -307,18 +281,17 @@ function update_last_customer_license_details($email){
 	}
 }
 
-/***************************************************************************************
-*
-* send_email_in_template function - This will send email notification using the custom
-*									email template
+/**
+* This will send email notification using the custom email template.
+*									
+* @param string $to Emails used to send the message.
+* @param string $body Contains the message in the email.
+* @param string $subject Contains the subject of the email.
+* @param string $from Contains the headers needed in the email.
+* @param string $attachment Contains the attached files for the email.
 * 
-* @to 			- the one receiving the email
-* @body 		- the email content or message
-* @subject 		- the subject of the email
-* @from 		- the sender of the email
-* @attachement 	- the attachement attached in the email
-*
-****************************************************************************************/	
+* @return boolean
+*/	
 add_action("eStore_send_mail","send_email_in_template",11,5);
 function send_email_in_template($to, $body, $subject, $from , $attachment){
 	
@@ -328,24 +301,13 @@ function send_email_in_template($to, $body, $subject, $from , $attachment){
 	$headers .= "Content-Type: text/html; charset=UTF-8 \r\n";
 	
 	$body = str_replace("\n","<br />",$body);
-	
-	//recurring payment
-	if(update_last_customer_license_details()){
-		$subject = get_option('eStore_rp_email_subj');
-		$email_body = get_option('eStore_rp_email_body'); 
-	}
-	
 	return email_template($to,$body,$subject,$headers,$attachment);
 }
 
 
-/***************************************************************************************
-*
-* wp_eStore_rp_email_settings function - this creates a new fields in WP eStores email 
-*										 settings to customize the recurring payment 
-* 										 email notification subject and message. 
-*
-****************************************************************************************/
+/**
+* Creates a new fields in WP eStores email settings to customize the recurring payment  email notification subject and message.
+*/
 add_action("wp_eStore_email_settings","wp_eStore_rp_email_settings",11,0);
 function wp_eStore_rp_email_settings(){
 	if (isset($_POST['estore_email_settings_update']))
@@ -357,7 +319,6 @@ function wp_eStore_rp_email_settings(){
 	$eStore_rp_email_subj = get_option("eStore_rp_email_subj");
 	$eStore_rp_email_body = get_option("eStore_rp_email_body");
 	?>
-	<!------------------------my custom code start---------------------------------------------->
 	<div class="postbox">
 		<h3 class="hndle"><label for="title">Recurring Payment Email Settings</label></h3>
 		<div class="inside">
@@ -377,12 +338,11 @@ function wp_eStore_rp_email_settings(){
 				$rp_body_settings = array('textarea_name' => 'eStore_rp_email_body');
 				wp_editor($eStore_rp_email_body, "eStore_rp_email_body_content", $rp_body_settings);
 				?>
-				<br /><p class="description">This is the email sent for the recurring payments of the customer. WP eStore email tags are can't be used here. License key is attached at the bottom of the message in the email.</p></td>
+				<br /><p class="description">This is the email sent for the recurring payments of the customer. WP eStore {first_name},{last_name} and {slm_data} email tags only are supported here.</p></td>
 				</tr>
 			</table>
 		</div>
 	</div>
-	<!------------------------my custom code end---------------------------------------------->
 	<?php
 }
 //////////////////////////////////////////////////////////////////////
@@ -391,32 +351,23 @@ function wp_eStore_rp_email_settings(){
 //
 //////////////////////////////////////////////////////////////////////
 
-/***************************************************************************************
-*
-* email_expiration_notification function - the action hook used for the license email
-*										   expiration notification
-*
-****************************************************************************************/
+/**
+* Action hook used for the license email expiration notification.
+*/
 function email_expiration_notification() {
     do_action('email_expiration_notification');
 }
 
-/***************************************************************************************
-*
-* enable_auto_key_expiry function - the action hook used for the auto license key 
-*									expiration
-*									
-****************************************************************************************/
+/**
+* Action hook used for the auto license key expiration.
+*/
 function enable_auto_key_expiry() {
     do_action('enable_auto_key_expiry');
 }
 
-/***************************************************************************************
-*
-* license_email_expiration_notification function - this function emails customers that 
-* 					their subscription is expiring one week before their expiration date
-*									
-****************************************************************************************/
+/**
+* Emails customers that their subscription is expiring one week before their expiration date.
+*/
 function license_email_expiration_notification(){    
 	global $wpdb;
 
@@ -430,13 +381,9 @@ function license_email_expiration_notification(){
 	
 	$options = get_option('slm_plugin_options');
 	
-	/* echo "<pre>";
-	print_r($data);
-	echo "</pre>"; */
 	if(count($data) > 0){
 		foreach($data as $customer){
 			$to = $customer["email"]; 
-		//	$to = "jeniffer.gobuyer@gmail.com";
 			$subject = $options["expiry_email_subject"];
 			$body = "Dear ".$customer["first_name"]." ".$customer["last_name"]."<br /><br />".
 					$options["expiry_email_message"];
@@ -445,22 +392,17 @@ function license_email_expiration_notification(){
 			$headers = 'From: '.$site_title.' <' . $options["expiry_reply_email"] . ">\r\n"; 
 			$headers .= 'Reply-To:' . $options["expiry_reply_email"]. "\r\n";
 			$headers .= "Content-Type: text/html; charset=UTF-8 \r\n";
-			
-		//	echo "sent".$to;
+		
 			email_template($to,$body,$subject,$headers); 
-			//wp_mail( $to, $subject, $body, $headers );  
 		}
 	}
 }
 //add_action("init","license_email_expiration_notification");
 add_action("email_expiration_notification","license_email_expiration_notification"); 
 
-/***************************************************************************************
-*
-* update_expired_license_status function - this function automatically updated status of  
-* 					the subscription when exp[iration data is reached.
-*									
-****************************************************************************************/
+/**
+* Automatically update status of the subscription when exp[iration data is reached.
+*/
 function update_expired_license_status(){
 	global $wpdb;
 	
@@ -482,12 +424,9 @@ function update_expired_license_status(){
 //add_action("init","update_expired_license_status");
 add_action("enable_auto_key_expiry","update_expired_license_status");
 
-/***************************************************************************************
-*
-* slm_expiry_notification_settings function - this function adds fields in SLM plugin   
-* 					settings to customise the license email expiration notification
-*									
-****************************************************************************************/
+/**
+* Add fields in SLM plugin settings to customise the license email expiration notification.
+*/
 add_action("wp_lic_mgr_general_settings","slm_expiry_notification_settings",11,0);
 function slm_expiry_notification_settings(){
 	if (isset($_POST['slm_save_settings'])) {

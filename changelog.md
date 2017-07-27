@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.2.0] - 2017-07-27
+### Added
+- Added support for {first_name},{last_name} and {slm_data} WP e-store email tags in recurring payment email settings.
+
+### Removed 
+- Removed the customized signature in the email.
+
+### Fixed
+- WP eStore email tags not showing values in recurring email notification.
+
 ## [1.2] - 2017-07-26
 ### Fixed
 - Fixed twice creation of the license key because of the eStore_notification_email_body_filter.
