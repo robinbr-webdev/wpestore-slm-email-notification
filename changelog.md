@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.2.2.2] - 2017-07-27
+### Fixed
+- Fixed the alt value in custom email template image logo.
+
+### Removed
+- Removed the code that modifies SLM manage table.
+- Removed the function that copies to SLM plugin.
+
 ## [1.2.2.1] - 2017-07-27
 ### Changed
 - Commented the code that copies class to SLM plugin.

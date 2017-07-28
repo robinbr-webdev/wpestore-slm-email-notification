@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP eStore and SLM email notification custom plugin
 Description: This plugin is used to modify Software License Manager Plugin and WP eStore plugin custom email functions and settings.
-Version: 1.2.2.1
+Version: 1.2.2.2
 Author: Netseek
 License: GPL2
 */
@@ -90,45 +90,6 @@ function lpb_cne_plugin_init(){
 				}
 			} 
 		}
-		
-		
-		//This lines of code adds a new class file inside SLM plugin.
-		//The class extends the WPLM_List_Licenses prepare items method to display only the current subscriptions of each customers.
-		/* $licenses_class_file = WP_PLUGIN_DIR."/software-license-manager/menu/slm-list-licenses-class.php";
-		$lpb_cen_file = plugin_dir_path(__FILE__)."lpb_cen_class.php";
-		$lpb_cen_file_nl = WP_PLUGIN_DIR."/software-license-manager/menu/lpb_cen_class.php";
-		
-		if(!file_exists($lpb_cen_file_nl)){
-			copy($lpb_cen_file,$lpb_cen_file_nl);
-		}
-		 *///commented for use for future purposes
-		 
-		$slm_ml = new ReflectionFunction('wp_lic_mgr_manage_licenses_menu');
-		$slm_ml_endline = $slm_ml->getEndLine();
-		$slm_ml_dir_path = $slm_ml->getFileName();
-		
-		$slm_ml_content = file($slm_ml_dir_path);
-		
-		$keyword = '$license_list = new LPB_CEN();';
-		$all_slm = implode("",$slm_ml_content);
-		foreach($slm_ml_content as $index => $string) {
-			if (strpos($all_slm, '$license_list = new WPLM_List_Licenses();') === FALSE){
-				if (strpos($string, '$license_list = new LPB_CEN();') !== FALSE){
-					$slm_ml_content[$index] = '$license_list = new WPLM_List_Licenses();'.PHP_EOL;
-				}
-				
-				if (strpos($string, 'include_once( "lpb_cen_class.php" );') !== FALSE){
-					$slm_ml_content[$index] = "";
-				}
-				
-				if (strpos($string, 'include_once("lpb_cen_class.php");') !== FALSE){
-					$slm_ml_content[$index] = "";
-				}
-				
-				$slm_ml_newContent = implode("", $slm_ml_content); 
-				file_put_contents($slm_ml_dir_path, $slm_ml_newContent);
-			}	
-		}
 	}//end of version compare
 }
 add_action("admin_init","lpb_cne_plugin_init");
@@ -154,11 +115,12 @@ if(!function_exists("email_template")){
 	function email_template($emails,$content,$subject,$headers = "",$attachment=""){
 		$op_logo = maybe_unserialize(get_option("optimizepress_header_logo_setup"));
 		$logo = $op_logo["logo"];
+		$site_title = get_bloginfo( 'name' );
 		
 		$to = $emails;
 		$email = get_option("admin_email");
 		$body = "<div style = 'background:#333;padding:30px;'>
-		<img src = '".$logo."' alt = 'landing page booster logo' style = 'margin-bottom:30px;'/>
+		<img src = '".$logo."' alt = '".$site_title."' style = 'margin-bottom:30px;'/>
 		<div style = 'background:#fff;padding:30px;min-height:500px;font-family:Arial;'>
 			".$content."
 		</div>
